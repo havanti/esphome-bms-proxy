@@ -1,0 +1,157 @@
+###############################
+# ESPHome Version >= 2026.4.2 #
+# ESP32 (M5Stack Atom Lite)   #
+# Topband BMS via BLE         #
+###############################
+
+esphome:
+  name: "bms-proxy"
+  friendly_name: "BMS Proxy"
+  min_version: "2026.4.2"
+
+esp32:
+  board: m5stack-atom  # Tested with M5Stack Atom Lite; any ESP32 with BLE and ESP-IDF works
+  framework:
+    type: esp-idf
+    version: recommended
+
+logger:
+  level: INFO
+  baud_rate: 0
+
+api:
+  encryption:
+    key: ""  # WARNING: generate a 32-byte base64 key before deploying — esphome.io/components/api.html
+
+ota:
+  platform: esphome
+  password: "12345678901234567890123456789012"  # WARNING: replace with a unique password before deploying
+
+wifi:
+  networks:
+    - ssid: !secret wifi_Mobile_ssid
+      password: !secret wifi_Mobile_password
+    - ssid: !secret wifi_Home_ssid
+      password: !secret wifi_Home_password
+  output_power: 17dB
+  power_save_mode: none
+  reboot_timeout: 0s
+
+external_components:
+  - source:
+      type: git
+      url: https://codeberg.org/havanti/esphome-bms-proxy
+    components: [bms]
+    refresh: 24h     # check for updates once a day (recommended)
+    # refresh: always  # always download latest (slower builds, use during development)
+    # refresh: 0s      # never re-download (fastest builds, no automatic updates)
+
+esp32_ble_tracker:
+  scan_parameters:
+    interval: 1100ms
+    window: 1100ms
+    active: false
+    continuous: true
+
+bluetooth_proxy:
+  active: false
+
+ble_client:
+  - mac_address: "XX:XX:XX:XX:XX:XX"  # MAC address of your BMS — look up via nRF Connect or manufacturer app
+    id: bms_ble
+    auto_connect: true
+
+bms:
+  - ble_client_id: bms_ble
+    soc:
+      name: "State of Charge"
+    voltage:
+      name: "Voltage"
+    current:
+      name: "Current"
+    power:
+      name: "Power"
+    cell_voltage_1:
+      name: "Cell 1"
+    cell_voltage_2:
+      name: "Cell 2"
+    cell_voltage_3:
+      name: "Cell 3"
+    cell_voltage_4:
+      name: "Cell 4"
+    temperature:
+      name: "Temperature"
+    delta_voltage:
+      name: "Cell Delta"
+    avg_cell_voltage:
+      name: "Cell Average"
+    min_cell_voltage:
+      name: "Cell Min"
+    max_cell_voltage:
+      name: "Cell Max"
+    capacity:
+      name: "Capacity"
+    cycles:
+      name: "Charge Cycles"
+    runtime:
+      name: "Runtime"
+    remaining_wh:
+      name: "Remaining Energy"
+    remaining_ah:
+      name: "Remaining Ah"
+      icon: mdi:battery-arrow-down
+    charge_power:
+      name: "Charge Power"
+    discharge_power:
+      name: "Discharge Power"
+    # nominal_capacity: nameplate Ah for State of Health calculation
+    # Wattstunde 200 Ah → 202.7, Ective 200 Ah → 201.4
+    nominal_capacity: 200.0
+    soh:
+      name: "State of Health"
+      icon: mdi:battery-heart
+    link_quality:
+      name: "Link Quality"
+    battery_charging:
+      name: "Charging"
+    connected:
+      name: "BLE Connected"
+    cell_imbalance:
+      name: "Cell Imbalance"
+    cell_imbalance_threshold: 50
+
+sensor:
+  - platform: internal_temperature
+    name: "ESP32 Internal Temperature"
+    entity_category: diagnostic
+
+  - platform: wifi_signal
+    name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform: copy
+    source_id: wifi_signal_db
+    name: "WiFi Signal"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "Signal %"
+    entity_category: diagnostic
+    device_class: ""
+
+  - platform: uptime
+    name: "Uptime"
+    entity_category: diagnostic
+
+web_server:
+  port: 80
+  local: true
+  version: 3
+  include_internal: true
+
+button:
+  - platform: restart
+    name: "Restart"
+    icon: mdi:restart
+    entity_category: config
