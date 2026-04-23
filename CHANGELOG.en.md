@@ -15,6 +15,17 @@ Tested against:
 
 ---
 
+## [1.3.2] — 2026-04-23 — Link-quality fixes
+
+### Fixed
+- `link_quality`: timeout now counts missed cycles at the expected packet rate (~1 failure per 1 s of silence instead of 1 per 15 s) — metric degrades faster on link loss
+- `link_quality`: current and temperature packets now also reset the heartbeat (previously only cell-voltage packets did) — prevents incorrectly low readings when only certain packet types arrive
+- `link_quality`: publishes `NAN` on disconnect instead of `0` — distinguishes "no signal" from "poor signal"
+- Temperature range check is now inclusive (`>=` / `<=`) — boundary values 2732 K and 3983 K are now correctly accepted
+- Corrected log prefix for Ective current packets (`"^:"` → `"0x5E:"`)
+
+---
+
 ## [1.3.1] — 2026-04-19 — Link-quality & charging-sensor fixes
 
 ### Fixed

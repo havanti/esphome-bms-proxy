@@ -19,7 +19,10 @@ void BMS::loop() {
   if (!connected_ || last_heartbeat_ms_ == 0) return;
   uint32_t now = millis();
   if (now - last_heartbeat_ms_ > HEARTBEAT_TIMEOUT_MS) {
-    push_link_quality_(false);
+    uint32_t elapsed = now - last_heartbeat_ms_;
+    uint32_t missed = std::min(elapsed / BMS_PACKET_INTERVAL_MS, static_cast<uint32_t>(LINK_QUALITY_WINDOW));
+    for (uint32_t i = 0; i < missed; i++)
+      push_link_quality_(false);
     last_heartbeat_ms_ = now;
   }
 }
@@ -84,7 +87,7 @@ void BMS::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if
       if (charge_power_sensor_ != nullptr) charge_power_sensor_->publish_state(NAN);
       if (discharge_power_sensor_ != nullptr) discharge_power_sensor_->publish_state(NAN);
       if (soh_sensor_ != nullptr) soh_sensor_->publish_state(NAN);
-      if (link_quality_sensor_ != nullptr) link_quality_sensor_->publish_state(0);
+      if (link_quality_sensor_ != nullptr) link_quality_sensor_->publish_state(NAN);
       if (battery_charging_sensor_ != nullptr) battery_charging_sensor_->publish_state(false);
       if (cell_imbalance_sensor_ != nullptr) cell_imbalance_sensor_->publish_state(false);
       for (auto *s : cell_voltage_sensor_)
@@ -220,13 +223,15 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
     memcpy(&current_raw, decoded + 4, sizeof(current_raw));
     int32_t current_ma = current_raw - ECTIVE_CURRENT_OFFSET_MA;
     float current_a = current_ma / 1000.0f;
-    ESP_LOGD(tag_, "^: Current=%.2f A", current_a);
+    ESP_LOGD(tag_, "0x5E: Current=%.2f A", current_a);
     if (current_sensor_ != nullptr) current_sensor_->publish_state(current_a);
     update_charging_state_(current_ma);
     last_current_a_ = current_a;
     smoothed_current_a_ = std::isnan(smoothed_current_a_)
                               ? current_a
                               : CURRENT_EMA_ALPHA * current_a + (1.0f - CURRENT_EMA_ALPHA) * smoothed_current_a_;
+    push_link_quality_(true);
+    last_heartbeat_ms_ = millis();
     publish_derived_();
     return;
   }
@@ -245,6 +250,8 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
     smoothed_current_a_ = std::isnan(smoothed_current_a_)
                               ? current_a
                               : CURRENT_EMA_ALPHA * current_a + (1.0f - CURRENT_EMA_ALPHA) * smoothed_current_a_;
+    push_link_quality_(true);
+    last_heartbeat_ms_ = millis();
     publish_derived_();
     return;
   }
@@ -262,11 +269,13 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
       uint8_t decoded[2];
       if (decode_ascii_hex_(data, 4, decoded, 2)) {
         uint16_t raw_le = decoded[0] | (static_cast<uint16_t>(decoded[1]) << 8);
-        if (raw_le > TEMP_KELVIN10_MIN && raw_le < TEMP_KELVIN10_MAX) {
+        if (raw_le >= TEMP_KELVIN10_MIN && raw_le <= TEMP_KELVIN10_MAX) {
           float temp = raw_le / 10.0f - 273.15f;
           ESP_LOGD(tag_, "Temp=%.1f°C (raw_le=%u)", temp, raw_le);
           if (temperature_sensor_ != nullptr)
             temperature_sensor_->publish_state(temp);
+          push_link_quality_(true);
+          last_heartbeat_ms_ = millis();
         }
       }
       return;

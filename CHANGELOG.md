@@ -15,6 +15,17 @@ Getestet mit:
 
 ---
 
+## [1.3.2] — 2026-04-23 — Link-Quality-Fixes
+
+### Behoben
+- `link_quality`: Timeout zählt jetzt gemäß erwarteter Paketrate (~1 Ausfall pro 1 s Stille statt 1 pro 15 s) — Metrik reagiert schneller auf Verbindungsabbruch
+- `link_quality`: Strom- und Temperaturpakete zählen jetzt ebenfalls als Heartbeat (bisher nur Zellenspannungspakete) — verhindert falsch niedrige Werte wenn nur bestimmte Pakettypen ankommen
+- `link_quality`: veröffentlicht `NAN` beim Trennen statt `0` — unterscheidet „kein Signal" von „schlechtes Signal"
+- Temperaturbereich-Prüfung inklusiv (`>=` / `<=`) — Grenzwerte 2732 K und 3983 K werden jetzt korrekt akzeptiert
+- Log-Prefix für Ective-Strompakete korrigiert (`"^:"` → `"0x5E:"`)
+
+---
+
 ## [1.3.1] — 2026-04-19 — Link-Quality & Charging-Sensor-Fixes
 
 ### Behoben

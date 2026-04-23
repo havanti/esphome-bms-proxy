@@ -55,6 +55,8 @@ static_assert(LINK_QUALITY_WINDOW > 0, "LINK_QUALITY_WINDOW must be > 0 to avoid
 static constexpr float RUNTIME_MIN_CURRENT_A = 0.1f;
 // Timeout (ms) without a valid frame before a missed cycle is recorded.
 static constexpr uint32_t HEARTBEAT_TIMEOUT_MS = 15000;
+// Expected BMS notification interval (ms) — used to count missed cycles during a timeout.
+static constexpr uint32_t BMS_PACKET_INTERVAL_MS = 1000;
 // LiFePO4 cell voltage range used to distinguish cell packets from static info packets.
 static constexpr uint16_t CELL_MV_MIN = 2500;
 static constexpr uint16_t CELL_MV_MAX = 4200;
