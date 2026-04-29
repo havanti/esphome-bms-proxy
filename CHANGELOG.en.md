@@ -11,9 +11,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Compatibility Status
 
 Tested against:
-- ESPHome **2026.4.2** — ESP-IDF ✅
+- ESPHome **2026.4.3** — ESP-IDF ✅
 
 ---
+
+## [1.3.3] — 2026-04-29 — Cross-task synchronisation
+
+### Changed
+- `connected_` and `last_heartbeat_ms_` converted to `std::atomic` — prevents race conditions between the BLE GATT task and the main loop
+
+### Documentation
+- Thread-safety comment on the `link_quality_*` ring buffer (deliberately not mutex-protected — torn updates only cause minor sample loss, no crash)
+
 
 ## [1.3.2] — 2026-04-23 — Link-quality fixes
 

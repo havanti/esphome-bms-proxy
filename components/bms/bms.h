@@ -1,6 +1,8 @@
 #pragma once
 #ifdef USE_ESP32_FRAMEWORK_ESP_IDF
 
+#include <atomic>
+
 #include "esphome/core/component.h"
 #include "esphome/components/ble_client/ble_client.h"
 #include "esphome/components/sensor/sensor.h"
@@ -150,7 +152,9 @@ class BMS : public Component, public ble_client::BLEClientNode {
 
   char tag_[32]{};
 
-  bool connected_{false};
+  // connected_ written from BT task (gattc events), read from main loop —
+  // std::atomic for cross-task safety.
+  std::atomic<bool> connected_{false};
   uint32_t last_voltage_mv_{0};
 
   // Cached values for heartbeat and capacity derivation
@@ -159,11 +163,16 @@ class BMS : public Component, public ble_client::BLEClientNode {
   float last_current_a_{NAN};
   float smoothed_current_a_{NAN};
 
-  // Link quality: rolling window ring buffer
+  // Link quality: rolling window ring buffer.
+  // Writes happen from both BT task (parse_notification_) and main loop
+  // (heartbeat-timeout in loop()). Reads from same locations. The buf_/idx_/sum_
+  // trio is not mutex-protected — torn updates only cause minor sample loss
+  // in the rolling-window quality metric, no crash or correctness issue.
   uint8_t link_quality_buf_[LINK_QUALITY_WINDOW]{};
   uint8_t link_quality_idx_{0};
   uint8_t link_quality_sum_{0};
-  uint32_t last_heartbeat_ms_{0};
+  // Heartbeat timestamp written from both tasks — atomic for safe reads.
+  std::atomic<uint32_t> last_heartbeat_ms_{0};
 
   // Charging-sensor hysteresis: retained state between updates so that small
   // current fluctuations around 0 A do not flip the binary sensor.

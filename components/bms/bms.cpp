@@ -16,14 +16,16 @@ void BMS::setup() {
 }
 
 void BMS::loop() {
-  if (!connected_ || last_heartbeat_ms_ == 0) return;
+  if (!connected_.load()) return;
+  uint32_t hb = last_heartbeat_ms_.load();
+  if (hb == 0) return;
   uint32_t now = millis();
-  if (now - last_heartbeat_ms_ > HEARTBEAT_TIMEOUT_MS) {
-    uint32_t elapsed = now - last_heartbeat_ms_;
+  if (now - hb > HEARTBEAT_TIMEOUT_MS) {
+    uint32_t elapsed = now - hb;
     uint32_t missed = std::min(elapsed / BMS_PACKET_INTERVAL_MS, static_cast<uint32_t>(LINK_QUALITY_WINDOW));
     for (uint32_t i = 0; i < missed; i++)
       push_link_quality_(false);
-    last_heartbeat_ms_ = now;
+    last_heartbeat_ms_.store(now);
   }
 }
 
@@ -44,11 +46,11 @@ void BMS::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if
     case ESP_GATTC_OPEN_EVT:
       if (param->open.status == ESP_GATT_OK) {
         ESP_LOGI(tag_, "Connected to BMS (%s)", this->parent_->address_str());
-        connected_ = true;
+        connected_.store(true);
         // Seed the heartbeat clock so the loop timeout is armed even if the BMS
         // never delivers a cell-voltage packet (otherwise link quality would
         // stay silent forever on a half-working link).
-        last_heartbeat_ms_ = millis();
+        last_heartbeat_ms_.store(millis());
         if (connected_sensor_ != nullptr)
           connected_sensor_->publish_state(true);
       } else {
@@ -58,13 +60,13 @@ void BMS::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if
 
     case ESP_GATTC_DISCONNECT_EVT:
       ESP_LOGI(tag_, "Disconnected from BMS (%s)", this->parent_->address_str());
-      connected_ = false;
+      connected_.store(false);
       last_voltage_mv_ = 0;
       last_soc_ = NAN;
       last_capacity_ah_ = NAN;
       last_current_a_ = NAN;
       smoothed_current_a_ = NAN;
-      last_heartbeat_ms_ = 0;
+      last_heartbeat_ms_.store(0);
       memset(link_quality_buf_, 0, sizeof(link_quality_buf_));
       link_quality_sum_ = 0;
       link_quality_idx_ = 0;
@@ -231,7 +233,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
                               ? current_a
                               : CURRENT_EMA_ALPHA * current_a + (1.0f - CURRENT_EMA_ALPHA) * smoothed_current_a_;
     push_link_quality_(true);
-    last_heartbeat_ms_ = millis();
+    last_heartbeat_ms_.store(millis());
     publish_derived_();
     return;
   }
@@ -251,7 +253,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
                               ? current_a
                               : CURRENT_EMA_ALPHA * current_a + (1.0f - CURRENT_EMA_ALPHA) * smoothed_current_a_;
     push_link_quality_(true);
-    last_heartbeat_ms_ = millis();
+    last_heartbeat_ms_.store(millis());
     publish_derived_();
     return;
   }
@@ -275,7 +277,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
           if (temperature_sensor_ != nullptr)
             temperature_sensor_->publish_state(temp);
           push_link_quality_(true);
-          last_heartbeat_ms_ = millis();
+          last_heartbeat_ms_.store(millis());
         }
       }
       return;
@@ -330,7 +332,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
         cell_imbalance_sensor_->publish_state(delta_mv > cell_imbalance_threshold_mv_);
       // Cell voltage packet = heartbeat: one successful cycle recorded
       push_link_quality_(true);
-      last_heartbeat_ms_ = millis();
+      last_heartbeat_ms_.store(millis());
       publish_derived_();
       return;
     }
