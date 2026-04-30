@@ -119,6 +119,7 @@ class BMS : public Component, public ble_client::BLEClientNode {
 
  protected:
   void parse_notification_(const uint8_t *data, uint16_t len);
+  void handle_current_packet_(const char *label, int32_t current_ma);
   void publish_derived_();
   void push_link_quality_(bool success);
   static bool decode_ascii_hex_(const uint8_t *ascii, size_t ascii_len, uint8_t *out, size_t out_len);

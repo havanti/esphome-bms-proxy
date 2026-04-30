@@ -214,6 +214,20 @@ bool BMS::decode_ascii_hex_(const uint8_t *ascii, size_t ascii_len, uint8_t *out
   return true;
 }
 
+void BMS::handle_current_packet_(const char *label, int32_t current_ma) {
+  float current_a = current_ma / 1000.0f;
+  ESP_LOGD(tag_, "%s: Current=%.2f A", label, current_a);
+  if (current_sensor_ != nullptr) current_sensor_->publish_state(current_a);
+  update_charging_state_(current_ma);
+  last_current_a_ = current_a;
+  smoothed_current_a_ = std::isnan(smoothed_current_a_)
+                            ? current_a
+                            : CURRENT_EMA_ALPHA * current_a + (1.0f - CURRENT_EMA_ALPHA) * smoothed_current_a_;
+  push_link_quality_(true);
+  last_heartbeat_ms_.store(millis());
+  publish_derived_();
+}
+
 void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
   if (len < 4) return;
 
@@ -223,18 +237,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
     if (!decode_ascii_hex_(data + 1, 16, decoded, 8)) return;
     int32_t current_raw;
     memcpy(&current_raw, decoded + 4, sizeof(current_raw));
-    int32_t current_ma = current_raw - ECTIVE_CURRENT_OFFSET_MA;
-    float current_a = current_ma / 1000.0f;
-    ESP_LOGD(tag_, "0x5E: Current=%.2f A", current_a);
-    if (current_sensor_ != nullptr) current_sensor_->publish_state(current_a);
-    update_charging_state_(current_ma);
-    last_current_a_ = current_a;
-    smoothed_current_a_ = std::isnan(smoothed_current_a_)
-                              ? current_a
-                              : CURRENT_EMA_ALPHA * current_a + (1.0f - CURRENT_EMA_ALPHA) * smoothed_current_a_;
-    push_link_quality_(true);
-    last_heartbeat_ms_.store(millis());
-    publish_derived_();
+    handle_current_packet_("0x5E", current_raw - ECTIVE_CURRENT_OFFSET_MA);
     return;
   }
 
@@ -244,17 +247,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
     if (!decode_ascii_hex_(data + 1, 16, decoded, 8)) return;
     int32_t current_raw;
     memcpy(&current_raw, decoded + 4, sizeof(current_raw));
-    float current_a = current_raw / 1000.0f;
-    ESP_LOGD(tag_, "0xE8: Current=%.2f A", current_a);
-    if (current_sensor_ != nullptr) current_sensor_->publish_state(current_a);
-    update_charging_state_(current_raw);
-    last_current_a_ = current_a;
-    smoothed_current_a_ = std::isnan(smoothed_current_a_)
-                              ? current_a
-                              : CURRENT_EMA_ALPHA * current_a + (1.0f - CURRENT_EMA_ALPHA) * smoothed_current_a_;
-    push_link_quality_(true);
-    last_heartbeat_ms_.store(millis());
-    publish_derived_();
+    handle_current_packet_("0xE8", current_raw);
     return;
   }
 
