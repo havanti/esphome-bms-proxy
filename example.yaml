@@ -42,9 +42,7 @@ external_components:
       type: git
       url: https://github.com/havanti/esphome-bms-proxy
     components: [bms]
-    refresh: 24h     # check for updates once a day (recommended)
-    # refresh: always  # always download latest (slower builds, use during development)
-    # refresh: 0s      # never re-download (fastest builds, no automatic updates)
+    refresh: always
 
 esp32_ble_tracker:
   scan_parameters:
