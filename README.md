@@ -56,7 +56,7 @@ Das BMS-Protokoll wurde vollständig per Reverse-Engineering aus HCI-Snoop-Logs 
 - **ESP32** mit BLE — empfohlen: M5Stack Atom oder ESP32-S3 DevKitC-1
 - **Framework**: ESP-IDF (kein Arduino)
 - **ESPHome** ≥ 2026.4.3
-- **MAC-Adresse** des BMS (einmalig mit [nRF Connect](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile) ermitteln)
+- **MAC-Adresse** des BMS (einmalig mit nRF Connect ermitteln)
 
 ---
 
