@@ -70,7 +70,7 @@ external_components:
       type: git
       url: https://github.com/havanti/esphome-bms-proxy
     components: [bms]
-    refresh: 24h
+    refresh: always
 ```
 
 ### Schritt 2: Konfiguration erstellen
@@ -99,7 +99,7 @@ external_components:
       type: git
       url: https://github.com/havanti/esphome-bms-proxy
     components: [bms]
-    refresh: 24h
+    refresh: always
 
 esp32_ble_tracker:
   scan_parameters:
