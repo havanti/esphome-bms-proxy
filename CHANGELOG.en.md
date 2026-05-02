@@ -35,7 +35,7 @@ Tested against:
 
 ---
 
-## [1.3.1] — 2026-04-19 — Link-quality & charging-sensor fixes
+## [1.3.1] — 2026-04-21 — Link-quality & charging-sensor fixes
 
 ### Fixed
 - `link_quality`: heartbeat clock is now seeded on GATT connect so the 15 s

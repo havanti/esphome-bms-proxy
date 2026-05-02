@@ -35,7 +35,7 @@ Getestet mit:
 
 ---
 
-## [1.3.1] — 2026-04-19 — Link-Quality & Charging-Sensor-Fixes
+## [1.3.1] — 2026-04-21 — Link-Quality & Charging-Sensor-Fixes
 
 ### Behoben
 - `link_quality`: Heartbeat-Uhr wird beim GATT-Connect gesetzt, damit der
