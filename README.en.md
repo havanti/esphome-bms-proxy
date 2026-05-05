@@ -2,7 +2,7 @@
 
 # ESPHome BMS Proxy
 
-[![Release](https://img.shields.io/github/v/release/havanti/esphome-bms-proxy?style=flat-square&color=blue)](https://github.com/havanti/esphome-bms-proxy/releases) [![Stars](https://img.shields.io/github/stars/havanti/esphome-bms-proxy?style=flat-square&color=yellow)](https://github.com/havanti/esphome-bms-proxy) [![ESPHome](https://img.shields.io/badge/ESPHome-%E2%89%A52026.4.3-blue?style=flat-square)](https://esphome.io) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/havanti/esphome-bms-proxy?style=flat-square&color=blue)](https://github.com/havanti/esphome-bms-proxy/releases) [![Stars](https://img.shields.io/github/stars/havanti/esphome-bms-proxy?style=flat-square&color=yellow)](https://github.com/havanti/esphome-bms-proxy) [![ESPHome](https://img.shields.io/badge/ESPHome-%E2%89%A52026.4.4-blue?style=flat-square)](https://esphome.io) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
 
 [Features](#what-this-project-does) • [Installation](#installation) • [Configuration](#configuration-options) • [Feedback](#feedback--testing) • [Changelog](CHANGELOG.en.md)
 
@@ -55,7 +55,7 @@ The BMS protocol was fully developed through reverse engineering of HCI snoop lo
 
 - **ESP32** with BLE — recommended: M5Stack Atom or ESP32-S3 DevKitC-1
 - **Framework**: ESP-IDF (no Arduino)
-- **ESPHome** ≥ 2026.4.3
+- **ESPHome** ≥ 2026.4.4
 - **MAC address** of the BMS (determine once using nRF Connect)
 
 ---
