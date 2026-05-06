@@ -257,7 +257,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
   // Wattstunde ~10°C: "0F0B00000000" → LE=0x0B0F=2831 → 9.95°C
   if (len == TEMPERATURE_PACKET_LEN) {
     bool trailing_zeros = true;
-    for (int i = 4; i < 12; i++) {
+    for (uint8_t i = 4; i < 12; i++) {
       if (data[i] != '0') { trailing_zeros = false; break; }
     }
     if (trailing_zeros) {
@@ -281,7 +281,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
   if (len == INFO_PACKET_LEN) {
     // Skip all-zero padding (unused cell slots 5–16)
     bool all_zero = true;
-    for (int i = 0; i < 16; i++) {
+    for (uint8_t i = 0; i < 16; i++) {
       if (data[i] != '0') { all_zero = false; break; }
     }
     if (all_zero) return;
@@ -290,17 +290,17 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
 
     // Try cell voltages: 4 × uint16 LE in mV, LiFePO4 range 2500–4200 mV
     uint16_t cells[4];
-    for (int i = 0; i < 4; i++)
+    for (uint8_t i = 0; i < 4; i++)
       cells[i] = decoded[i * 2] | (static_cast<uint16_t>(decoded[i * 2 + 1]) << 8);
     bool valid_cells = true;
-    for (int i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < 4; i++) {
       if (cells[i] < CELL_MV_MIN || cells[i] > CELL_MV_MAX) { valid_cells = false; break; }
     }
     if (valid_cells) {
       uint32_t total_mv = static_cast<uint32_t>(cells[0]) + cells[1] + cells[2] + cells[3];
       last_voltage_mv_ = total_mv;
       uint16_t cell_min = cells[0], cell_max = cells[0];
-      for (int i = 1; i < 4; i++) {
+      for (uint8_t i = 1; i < 4; i++) {
         if (cells[i] < cell_min) cell_min = cells[i];
         if (cells[i] > cell_max) cell_max = cells[i];
       }
@@ -311,7 +311,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
         voltage_sensor_->publish_state(total_mv / 1000.0f);
       if (avg_cell_voltage_sensor_ != nullptr)
         avg_cell_voltage_sensor_->publish_state(total_mv / 4000.0f);
-      for (int i = 0; i < 4; i++) {
+      for (uint8_t i = 0; i < 4; i++) {
         if (cell_voltage_sensor_[i] != nullptr)
           cell_voltage_sensor_[i]->publish_state(cells[i] / 1000.0f);
       }
