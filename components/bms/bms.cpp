@@ -231,23 +231,23 @@ void BMS::handle_current_packet_(const char *label, int32_t current_ma) {
 void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
   if (len < 4) return;
 
-  // ── Ective: 0x5E packet — int32 LE current, offset 600, unit 1 mA ───────
-  if (data[0] == 0x5E && len == 17) {
+  // ── Ective current packet — int32 LE current, offset 600, unit 1 mA ────
+  if (data[0] == PACKET_TYPE_ECTIVE && len == CURRENT_PACKET_LEN) {
     uint8_t decoded[8];
     if (!decode_ascii_hex_(data + 1, 16, decoded, 8)) return;
     int32_t current_raw;
     memcpy(&current_raw, decoded + 4, sizeof(current_raw));
-    handle_current_packet_("0x5E", current_raw - ECTIVE_CURRENT_OFFSET_MA);
+    handle_current_packet_("Ective", current_raw - ECTIVE_CURRENT_OFFSET_MA);
     return;
   }
 
-  // ── Wattstunde: 0xE8 packet — int32 LE current, signed, unit 1 mA ───────
-  if (data[0] == 0xE8 && len == 17) {
+  // ── Wattstunde current packet — int32 LE current, signed, unit 1 mA ────
+  if (data[0] == PACKET_TYPE_WATTSTUNDE && len == CURRENT_PACKET_LEN) {
     uint8_t decoded[8];
     if (!decode_ascii_hex_(data + 1, 16, decoded, 8)) return;
     int32_t current_raw;
     memcpy(&current_raw, decoded + 4, sizeof(current_raw));
-    handle_current_packet_("0xE8", current_raw);
+    handle_current_packet_("Wattstunde", current_raw);
     return;
   }
 
@@ -255,7 +255,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
   // Encoding: first 4 chars = uint16 LE, Kelvin×10  →  raw/10 - 273.15 = °C
   // Ective ~9°C:  "050B00000000" → LE=0x0B05=2821 → 8.95°C
   // Wattstunde ~10°C: "0F0B00000000" → LE=0x0B0F=2831 → 9.95°C
-  if (len == 12) {
+  if (len == TEMPERATURE_PACKET_LEN) {
     bool trailing_zeros = true;
     for (int i = 4; i < 12; i++) {
       if (data[i] != '0') { trailing_zeros = false; break; }
@@ -278,7 +278,7 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
   }
 
   // ── 16-char ASCII hex packet: cell voltages OR static battery info ────────
-  if (len == 16) {
+  if (len == INFO_PACKET_LEN) {
     // Skip all-zero padding (unused cell slots 5–16)
     bool all_zero = true;
     for (int i = 0; i < 16; i++) {
@@ -348,8 +348,13 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
       }
       last_capacity_ah_ = capacity_ah;
       publish_derived_();
+      return;
     }
   }
+
+  // Reached only when no branch above matched: log the head byte and length
+  // so unknown variants surface in debug logs rather than failing silently.
+  ESP_LOGD(tag_, "Unrecognized BMS packet: len=%u head=0x%02X", len, data[0]);
 }
 
 }  // namespace bms

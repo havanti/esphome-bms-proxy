@@ -49,6 +49,13 @@ namespace bms {
 
 static constexpr uint16_t NOTIFY_HANDLE = 0x0016;
 static constexpr uint16_t CCCD_HANDLE = NOTIFY_HANDLE + 1;  // 0x0017
+// Current-packet header bytes that distinguish the two supported BMS variants.
+static constexpr uint8_t PACKET_TYPE_ECTIVE = 0x5E;
+static constexpr uint8_t PACKET_TYPE_WATTSTUNDE = 0xE8;
+// Both variants ship a 17-byte ASCII-hex frame (1 header byte + 16 hex chars).
+static constexpr uint16_t CURRENT_PACKET_LEN = 17;
+static constexpr uint16_t TEMPERATURE_PACKET_LEN = 12;
+static constexpr uint16_t INFO_PACKET_LEN = 16;
 // Rolling window size for link quality tracking (one slot per BMS update cycle ~1 s).
 static constexpr uint8_t LINK_QUALITY_WINDOW = 100;
 static_assert(LINK_QUALITY_WINDOW <= 255, "sum of 0/1 values must fit in uint8_t (max 255)");
