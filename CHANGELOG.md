@@ -11,9 +11,9 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Kompatibilitätsstatus
 
 Getestet mit:
+- ESPHome **2026.5.0** — ESP-IDF ✅
 - ESPHome **2026.4.5** — ESP-IDF ✅
 - ESPHome **2026.4.4** — ESP-IDF ✅
-- ESPHome **2026.4.3** — ESP-IDF ✅
 
 ---
 
