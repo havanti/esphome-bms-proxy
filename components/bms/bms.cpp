@@ -279,7 +279,9 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
 
   // ── 16-char ASCII hex packet: cell voltages OR static battery info ────────
   if (len == INFO_PACKET_LEN) {
-    // Skip all-zero padding (unused cell slots 5–16)
+    // Skip all-zero padding (unused cell slots 5–16). Functionally the range checks
+    // below would reject these packets too — this early return exists so regular
+    // padding does not reach the "Unrecognized BMS packet" debug log.
     bool all_zero = true;
     for (uint8_t i = 0; i < 16; i++) {
       if (data[i] != '0') { all_zero = false; break; }
