@@ -17,6 +17,21 @@ Tested against:
 
 ---
 
+## [1.3.6] — 2026-09-30 — Code cleanup
+
+### Changed
+- Current readings beyond ±1000 A are dropped as corrupt packets before they reach the smoothing
+  for the runtime estimate, where a single outlier would have lingered for many cycles.
+- The cycle count is only published up to 20 000, in line with the existing limits for capacity,
+  SoC and temperature.
+- Multi-byte fields are read with little-endian helpers throughout instead of partly `memcpy`,
+  partly bit shifts. The result on the ESP32 is the same.
+- Cell count, packet lengths and field offsets are named constants (`NUM_CELLS` instead of `4`
+  etc.), the log tag length is guarded by a `static_assert`.
+
+Built with ESPHome 2026.9.1, not tested on a battery.
+
+
 ## [1.3.5] — 2026-09-30 — Web server optional
 
 ### Changed

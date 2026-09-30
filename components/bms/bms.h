@@ -52,10 +52,26 @@ static constexpr uint16_t CCCD_HANDLE = NOTIFY_HANDLE + 1;  // 0x0017
 // Current-packet header bytes that distinguish the two supported BMS variants.
 static constexpr uint8_t PACKET_TYPE_ECTIVE = 0x5E;
 static constexpr uint8_t PACKET_TYPE_WATTSTUNDE = 0xE8;
+// Shorter notifications carry none of the known packet types.
+static constexpr uint16_t MIN_PACKET_LEN = 4;
 // Both variants ship a 17-byte ASCII-hex frame (1 header byte + 16 hex chars).
 static constexpr uint16_t CURRENT_PACKET_LEN = 17;
+static constexpr uint16_t CURRENT_PACKET_HEX_LEN = CURRENT_PACKET_LEN - 1;
+static constexpr uint16_t CURRENT_PACKET_DECODED_LEN = CURRENT_PACKET_HEX_LEN / 2;
+// Byte offset of the int32 current in the decoded current packet.
+static constexpr uint8_t CURRENT_PACKET_CURRENT_OFFSET = 4;
 static constexpr uint16_t TEMPERATURE_PACKET_LEN = 12;
+// Leading hex chars carrying the uint16 temperature; the rest of the packet is '0'.
+static constexpr uint16_t TEMPERATURE_HEX_LEN = 4;
 static constexpr uint16_t INFO_PACKET_LEN = 16;
+static constexpr uint16_t INFO_PACKET_DECODED_LEN = INFO_PACKET_LEN / 2;
+// Static info packet layout: uint32 capacity_mah, uint16 cycles, uint16 soc_%.
+static constexpr uint8_t INFO_CAPACITY_OFFSET = 0;
+static constexpr uint8_t INFO_CYCLES_OFFSET = 4;
+static constexpr uint8_t INFO_SOC_OFFSET = 6;
+// Cells in series (12.8 V LiFePO4), one uint16 LE voltage each in the cell packet.
+static constexpr uint8_t NUM_CELLS = 4;
+static_assert(INFO_PACKET_DECODED_LEN == NUM_CELLS * sizeof(uint16_t), "cell packet must hold one uint16 per cell");
 // Rolling window size for link quality tracking (one slot per BMS update cycle ~1 s).
 static constexpr uint8_t LINK_QUALITY_WINDOW = 100;
 static_assert(LINK_QUALITY_WINDOW <= 255, "sum of 0/1 values must fit in uint8_t (max 255)");
@@ -79,11 +95,19 @@ static constexpr float CURRENT_EMA_ALPHA = 0.1f;
 // Static info packet: valid capacity range in mAh (10 Ah..1000 Ah).
 static constexpr uint32_t CAPACITY_MAH_MIN = 10000;
 static constexpr uint32_t CAPACITY_MAH_MAX = 1000000;
+// Static info packet: sanity limits for cycle count and SoC.
+static constexpr uint16_t CYCLES_MAX = 20000;
+static constexpr uint16_t SOC_PERCENT_MAX = 100;
+// Current sanity range (mA): readings beyond ±1000 A are treated as corrupt frames.
+static constexpr int32_t CURRENT_MAX_ABS_MA = 1000000;
 // Hysteresis thresholds (mA) for the battery_charging binary sensor to avoid
 // flipping around the zero-current point. Enter charging state at +200 mA,
 // leave it at -200 mA; between the thresholds the previous state is held.
 static constexpr int32_t CHARGING_ON_THRESHOLD_MA = 200;
 static constexpr int32_t CHARGING_OFF_THRESHOLD_MA = -200;
+// Log tag "bms@AA:BB:CC:DD:EE:FF" incl. terminator must fit.
+static constexpr size_t TAG_LEN = 32;
+static_assert(TAG_LEN >= sizeof("bms@AA:BB:CC:DD:EE:FF"), "tag_ too short for bms@<MAC>");
 
 class BMS : public Component, public ble_client::BLEClientNode {
  public:
@@ -102,6 +126,7 @@ class BMS : public Component, public ble_client::BLEClientNode {
   void set_cell_voltage_sensor_2(sensor::Sensor *s) { cell_voltage_sensor_[1] = s; }
   void set_cell_voltage_sensor_3(sensor::Sensor *s) { cell_voltage_sensor_[2] = s; }
   void set_cell_voltage_sensor_4(sensor::Sensor *s) { cell_voltage_sensor_[3] = s; }
+  static_assert(NUM_CELLS == 4, "one set_cell_voltage_sensor_N setter per cell");
   void set_capacity_sensor(sensor::Sensor *s) { capacity_sensor_ = s; }
   void set_cycles_sensor(sensor::Sensor *s) { cycles_sensor_ = s; }
   void set_temperature_sensor(sensor::Sensor *s) { temperature_sensor_ = s; }
@@ -137,7 +162,7 @@ class BMS : public Component, public ble_client::BLEClientNode {
   sensor::Sensor *voltage_sensor_{nullptr};
   sensor::Sensor *current_sensor_{nullptr};
   sensor::Sensor *power_sensor_{nullptr};
-  sensor::Sensor *cell_voltage_sensor_[4]{nullptr, nullptr, nullptr, nullptr};
+  sensor::Sensor *cell_voltage_sensor_[NUM_CELLS]{};
   sensor::Sensor *capacity_sensor_{nullptr};
   sensor::Sensor *cycles_sensor_{nullptr};
   sensor::Sensor *temperature_sensor_{nullptr};
@@ -158,7 +183,7 @@ class BMS : public Component, public ble_client::BLEClientNode {
   binary_sensor::BinarySensor *cell_imbalance_sensor_{nullptr};
   uint16_t cell_imbalance_threshold_mv_{50};
 
-  char tag_[32]{};
+  char tag_[TAG_LEN]{};
 
   // connected_ written from BT task (gattc events), read from main loop —
   // std::atomic for cross-task safety.

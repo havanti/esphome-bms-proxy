@@ -10,6 +10,16 @@
 namespace esphome {
 namespace bms {
 
+// Little-endian field readers for decoded BMS payloads (independent of host byte order).
+static inline uint16_t read_u16_le(const uint8_t *p) {
+  return static_cast<uint16_t>(p[0] | (static_cast<uint16_t>(p[1]) << 8));
+}
+
+static inline uint32_t read_u32_le(const uint8_t *p) {
+  return static_cast<uint32_t>(p[0]) | (static_cast<uint32_t>(p[1]) << 8) | (static_cast<uint32_t>(p[2]) << 16) |
+         (static_cast<uint32_t>(p[3]) << 24);
+}
+
 void BMS::setup() {
   snprintf(tag_, sizeof(tag_), "bms@%s", this->parent_->address_str());
   ESP_LOGCONFIG(tag_, "BMS component setup");
@@ -216,6 +226,11 @@ bool BMS::decode_ascii_hex_(const uint8_t *ascii, size_t ascii_len, uint8_t *out
 }
 
 void BMS::handle_current_packet_(const char *label, int32_t current_ma) {
+  // Reject corrupt readings before they reach the EMA smoother, which would carry them for many cycles.
+  if (current_ma > CURRENT_MAX_ABS_MA || current_ma < -CURRENT_MAX_ABS_MA) {
+    ESP_LOGD(tag_, "%s: current %ld mA out of range, ignored", label, static_cast<long>(current_ma));
+    return;
+  }
   float current_a = current_ma / 1000.0f;
   ESP_LOGD(tag_, "%s: Current=%.2f A", label, current_a);
   if (current_sensor_ != nullptr) current_sensor_->publish_state(current_a);
@@ -230,24 +245,22 @@ void BMS::handle_current_packet_(const char *label, int32_t current_ma) {
 }
 
 void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
-  if (len < 4) return;
+  if (len < MIN_PACKET_LEN) return;
 
   // ── Ective current packet — int32 LE current, offset 600, unit 1 mA ────
   if (data[0] == PACKET_TYPE_ECTIVE && len == CURRENT_PACKET_LEN) {
-    uint8_t decoded[8];
-    if (!decode_ascii_hex_(data + 1, 16, decoded, 8)) return;
-    int32_t current_raw;
-    memcpy(&current_raw, decoded + 4, sizeof(current_raw));
+    uint8_t decoded[CURRENT_PACKET_DECODED_LEN];
+    if (!decode_ascii_hex_(data + 1, CURRENT_PACKET_HEX_LEN, decoded, sizeof(decoded))) return;
+    auto current_raw = static_cast<int32_t>(read_u32_le(decoded + CURRENT_PACKET_CURRENT_OFFSET));
     handle_current_packet_("Ective", current_raw - ECTIVE_CURRENT_OFFSET_MA);
     return;
   }
 
   // ── Wattstunde current packet — int32 LE current, signed, unit 1 mA ────
   if (data[0] == PACKET_TYPE_WATTSTUNDE && len == CURRENT_PACKET_LEN) {
-    uint8_t decoded[8];
-    if (!decode_ascii_hex_(data + 1, 16, decoded, 8)) return;
-    int32_t current_raw;
-    memcpy(&current_raw, decoded + 4, sizeof(current_raw));
+    uint8_t decoded[CURRENT_PACKET_DECODED_LEN];
+    if (!decode_ascii_hex_(data + 1, CURRENT_PACKET_HEX_LEN, decoded, sizeof(decoded))) return;
+    auto current_raw = static_cast<int32_t>(read_u32_le(decoded + CURRENT_PACKET_CURRENT_OFFSET));
     handle_current_packet_("Wattstunde", current_raw);
     return;
   }
@@ -258,13 +271,13 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
   // Wattstunde ~10°C: "0F0B00000000" → LE=0x0B0F=2831 → 9.95°C
   if (len == TEMPERATURE_PACKET_LEN) {
     bool trailing_zeros = true;
-    for (uint8_t i = 4; i < 12; i++) {
+    for (uint16_t i = TEMPERATURE_HEX_LEN; i < TEMPERATURE_PACKET_LEN; i++) {
       if (data[i] != '0') { trailing_zeros = false; break; }
     }
     if (trailing_zeros) {
-      uint8_t decoded[2];
-      if (decode_ascii_hex_(data, 4, decoded, 2)) {
-        uint16_t raw_le = decoded[0] | (static_cast<uint16_t>(decoded[1]) << 8);
+      uint8_t decoded[TEMPERATURE_HEX_LEN / 2];
+      if (decode_ascii_hex_(data, TEMPERATURE_HEX_LEN, decoded, sizeof(decoded))) {
+        uint16_t raw_le = read_u16_le(decoded);
         if (raw_le >= TEMP_KELVIN10_MIN && raw_le <= TEMP_KELVIN10_MAX) {
           float temp = raw_le / 10.0f - 273.15f;
           ESP_LOGD(tag_, "Temp=%.1f°C (raw_le=%u)", temp, raw_le);
@@ -284,37 +297,38 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
     // below would reject these packets too — this early return exists so regular
     // padding does not reach the "Unrecognized BMS packet" debug log.
     bool all_zero = true;
-    for (uint8_t i = 0; i < 16; i++) {
+    for (uint16_t i = 0; i < INFO_PACKET_LEN; i++) {
       if (data[i] != '0') { all_zero = false; break; }
     }
     if (all_zero) return;
-    uint8_t decoded[8];
-    if (!decode_ascii_hex_(data, 16, decoded, 8)) return;
+    uint8_t decoded[INFO_PACKET_DECODED_LEN];
+    if (!decode_ascii_hex_(data, INFO_PACKET_LEN, decoded, sizeof(decoded))) return;
 
-    // Try cell voltages: 4 × uint16 LE in mV, LiFePO4 range 2500–4200 mV
-    uint16_t cells[4];
-    for (uint8_t i = 0; i < 4; i++)
-      cells[i] = decoded[i * 2] | (static_cast<uint16_t>(decoded[i * 2 + 1]) << 8);
+    // Try cell voltages: NUM_CELLS × uint16 LE in mV, LiFePO4 range 2500–4200 mV
+    uint16_t cells[NUM_CELLS];
+    for (uint8_t i = 0; i < NUM_CELLS; i++)
+      cells[i] = read_u16_le(decoded + i * sizeof(uint16_t));
     bool valid_cells = true;
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < NUM_CELLS; i++) {
       if (cells[i] < CELL_MV_MIN || cells[i] > CELL_MV_MAX) { valid_cells = false; break; }
     }
     if (valid_cells) {
-      uint32_t total_mv = static_cast<uint32_t>(cells[0]) + cells[1] + cells[2] + cells[3];
-      last_voltage_mv_ = total_mv;
+      uint32_t total_mv = 0;
       uint16_t cell_min = cells[0], cell_max = cells[0];
-      for (uint8_t i = 1; i < 4; i++) {
+      for (uint8_t i = 0; i < NUM_CELLS; i++) {
+        total_mv += cells[i];
         if (cells[i] < cell_min) cell_min = cells[i];
         if (cells[i] > cell_max) cell_max = cells[i];
       }
+      last_voltage_mv_ = total_mv;
       uint16_t delta_mv = cell_max - cell_min;
       ESP_LOGD(tag_, "Cells: %u %u %u %u mV → %.3f V  delta=%u mV",
                cells[0], cells[1], cells[2], cells[3], total_mv / 1000.0f, delta_mv);
       if (voltage_sensor_ != nullptr)
         voltage_sensor_->publish_state(total_mv / 1000.0f);
       if (avg_cell_voltage_sensor_ != nullptr)
-        avg_cell_voltage_sensor_->publish_state(total_mv / 4000.0f);
-      for (uint8_t i = 0; i < 4; i++) {
+        avg_cell_voltage_sensor_->publish_state(total_mv / (NUM_CELLS * 1000.0f));
+      for (uint8_t i = 0; i < NUM_CELLS; i++) {
         if (cell_voltage_sensor_[i] != nullptr)
           cell_voltage_sensor_[i]->publish_state(cells[i] / 1000.0f);
       }
@@ -334,18 +348,17 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
     }
 
     // Not valid cells → static battery info packet: capacity_mah, cycles, soc%
-    uint32_t capacity_mah;
-    uint16_t cycles, soc;
-    memcpy(&capacity_mah, decoded, 4);
-    memcpy(&cycles, decoded + 4, 2);
-    memcpy(&soc, decoded + 6, 2);
+    uint32_t capacity_mah = read_u32_le(decoded + INFO_CAPACITY_OFFSET);
+    uint16_t cycles = read_u16_le(decoded + INFO_CYCLES_OFFSET);
+    uint16_t soc = read_u16_le(decoded + INFO_SOC_OFFSET);
     if (capacity_mah >= CAPACITY_MAH_MIN && capacity_mah <= CAPACITY_MAH_MAX) {
       float capacity_ah = capacity_mah / 1000.0f;
       ESP_LOGD(tag_, "Static: Capacity=%.3f Ah  Cycles=%u  SOC=%u%%",
                capacity_ah, cycles, soc);
       if (capacity_sensor_ != nullptr) capacity_sensor_->publish_state(capacity_ah);
-      if (cycles_sensor_ != nullptr) cycles_sensor_->publish_state(static_cast<float>(cycles));
-      if (soc <= 100) {
+      if (cycles <= CYCLES_MAX && cycles_sensor_ != nullptr)
+        cycles_sensor_->publish_state(static_cast<float>(cycles));
+      if (soc <= SOC_PERCENT_MAX) {
         if (soc_sensor_ != nullptr) soc_sensor_->publish_state(static_cast<float>(soc));
         last_soc_ = static_cast<float>(soc);
       }

@@ -17,6 +17,21 @@ Getestet mit:
 
 ---
 
+## [1.3.6] — 2026-09-30 — Code aufgeräumt
+
+### Geändert
+- Stromwerte außerhalb von ±1000 A werden als fehlerhafte Pakete verworfen, bevor sie in die
+  Glättung für die Restlaufzeit gehen. Dort hätte ein einzelner Ausreißer viele Zyklen nachgewirkt.
+- Die Zyklenzahl wird nur bis 20 000 veröffentlicht, passend zu den bestehenden Grenzen für
+  Kapazität, SoC und Temperatur.
+- Mehrbyte-Felder werden einheitlich per Little-Endian-Helfer gelesen statt teils per `memcpy`,
+  teils per Bit-Shift. Das Ergebnis ist auf dem ESP32 dasselbe.
+- Zellenzahl, Paketlängen und Feld-Offsets sind benannte Konstanten (`NUM_CELLS` statt `4` usw.),
+  die Länge des Log-Tags ist per `static_assert` abgesichert.
+
+Gebaut mit ESPHome 2026.9.1, an einem Akku nicht getestet.
+
+
 ## [1.3.5] — 2026-09-30 — Webserver optional
 
 ### Geändert
