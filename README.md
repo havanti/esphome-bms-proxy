@@ -75,7 +75,10 @@ external_components:
 
 ### Schritt 2: Konfiguration erstellen
 
-Die Datei `example.yaml` als Ausgangspunkt verwenden. MAC-Adressen eintragen und WLAN-Zugangsdaten in `secrets.yaml` hinterlegen.
+Die Datei `example.yaml` als Ausgangspunkt verwenden. MAC-Adressen eintragen, WLAN-Zugangsdaten und
+`api_encryption_key` in `secrets.yaml` hinterlegen. Der Schlüssel muss ein 32-Byte-Base64-Schlüssel
+sein, zum Beispiel erzeugt mit `openssl rand -base64 32`. Ein leerer Schlüssel wird seit ESPHome
+2026.9.0 abgelehnt.
 
 ### Schritt 3: Flashen
 
@@ -88,6 +91,12 @@ OTA-Update nach dem Erstflash:
 ```bash
 esphome run example.yaml --device 192.168.x.x
 ```
+
+`encryption: {}` im `ota`-Block verschlüsselt die Übertragung mit dem `api`-Schlüssel, ein eigenes
+OTA-Passwort ist nicht nötig. Läuft auf dem ESP32 noch eine Firmware, die mit OTA-Passwort gebaut
+wurde, bricht das Update mit `the device did not offer encryption` ab. Dann einmal mit dem
+bisherigen `password` statt `encryption: {}` installieren und danach den `encryption`-Block wieder
+einfügen.
 
 ---
 
@@ -103,8 +112,8 @@ external_components:
 
 esp32_ble_tracker:
   scan_parameters:
-    interval: 1100ms
-    window: 1100ms
+    interval: 320ms
+    window: 300ms
     active: false
     continuous: true
 

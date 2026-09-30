@@ -34,10 +34,11 @@ void BMS::dump_config() {
   ESP_LOGCONFIG(tag_, "  MAC: %s", this->parent_->address_str());
   ESP_LOGCONFIG(tag_, "  Service UUID: 0xFFE0");
   ESP_LOGCONFIG(tag_, "  Notify Characteristic: 0xFFE4  Handle: 0x%04X", NOTIFY_HANDLE);
-  if (nominal_capacity_ah_ > 0.0f)
+  if (nominal_capacity_ah_ > 0.0f) {
     ESP_LOGCONFIG(tag_, "  Nominal Capacity: %.1f Ah (SoH enabled)", nominal_capacity_ah_);
-  else
+  } else {
     ESP_LOGCONFIG(tag_, "  Nominal Capacity: not set (SoH disabled)");
+  }
 }
 
 void BMS::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,

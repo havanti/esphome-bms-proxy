@@ -17,6 +17,24 @@ Getestet mit:
 
 ---
 
+## [1.3.4] — 2026-09-30 — Build ohne Warnungen
+
+### Geändert
+- `example.yaml`: `api: encryption: key` kommt jetzt aus `!secret api_encryption_key`. Der leere
+  Schlüssel `""` wird seit ESPHome 2026.9.0 abgelehnt, das Beispiel ließ sich so nicht bauen.
+- `example.yaml`: `ota` nutzt `encryption: {}` mit dem `api`-Schlüssel statt eines
+  Platzhalter-Passworts. ESPHome warnte, dass das Passwort neben dem `api`-Schlüssel nur Flash und
+  RAM kostet. Umstieg von einer Firmware mit OTA-Passwort: siehe README, Schritt 3.
+- `example.yaml`: BLE-Scanfenster von 1100 ms auf `interval: 320ms`/`window: 300ms`. ESPHome
+  warnt, dass lange Fenster bei gleichzeitigem WLAN zu Verbindungsabbrüchen führen können. Am
+  Proxy noch nicht getestet.
+- `dump_config()`: Klammern um die beiden `ESP_LOGCONFIG`-Zweige. Beim Logger-Level INFO fallen die
+  Aufrufe weg, der leere `else`-Zweig löste `-Wempty-body` aus.
+
+### Dokumentation
+- README: Schritte 2 und 3 sowie das Konfigurationsbeispiel an `example.yaml` angepasst.
+
+
 ## [1.3.3] — 2026-04-29 — Cross-Task-Synchronisation
 
 ### Geändert
