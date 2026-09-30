@@ -96,6 +96,17 @@ is not needed. If the ESP32 still runs a firmware built with an OTA password, th
 with `the device did not offer encryption`. In that case install once with the previous `password`
 instead of `encryption: {}`, then put the `encryption` block back.
 
+### Web server (optional)
+
+The `web_server` block is commented out in `example.yaml`. When enabled, the ESP32 serves its own
+web UI on port 80 with all battery values, without Home Assistant. Without `auth` it is not
+protected: anyone on the same Wi-Fi can view the values, restart the ESP and read the logs, for
+example on campsites or in other foreign Wi-Fi networks. The `api` key only secures the connection
+to Home Assistant, the web UI runs unencrypted over HTTP. If you want to use the web server,
+uncomment the `auth` lines in the example as well and add `web_username` and `web_password` to
+`secrets.yaml`. `type: digest` does not send the password in plain text, but the pages stay
+unencrypted, so run the web server only in your own network.
+
 ---
 
 ## Example configuration

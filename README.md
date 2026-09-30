@@ -98,6 +98,17 @@ wurde, bricht das Update mit `the device did not offer encryption` ab. Dann einm
 bisherigen `password` statt `encryption: {}` installieren und danach den `encryption`-Block wieder
 einfügen.
 
+### Webserver (optional)
+
+In `example.yaml` ist der `web_server`-Block auskommentiert. Eingeschaltet zeigt der ESP32 auf
+Port 80 eine eigene Weboberfläche mit allen Akkuwerten, ohne Home Assistant. Ohne `auth` ist sie
+nicht geschützt: Jeder im selben WLAN kann die Werte ansehen, den ESP neu starten und die Logs
+mitlesen, etwa auf Campingplätzen oder in fremden WLANs. Der `api`-Schlüssel sichert nur die
+Verbindung zu Home Assistant, die Weboberfläche läuft unverschlüsselt über HTTP. Wer den Webserver
+nutzen will, kommentiert im Beispiel auch die `auth`-Zeilen ein und trägt `web_username` und
+`web_password` in `secrets.yaml` ein. `type: digest` schickt das Passwort nicht im Klartext, die
+Seiten bleiben aber unverschlüsselt, deshalb den Webserver nur im eigenen Netz betreiben.
+
 ---
 
 ## Beispielkonfiguration

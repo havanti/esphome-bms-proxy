@@ -17,6 +17,17 @@ Tested against:
 
 ---
 
+## [1.3.5] — 2026-09-30 — Web server optional
+
+### Changed
+- `example.yaml`: the `web_server` block is commented out and marked as optional. Without `auth`
+  anyone on the same Wi-Fi could view the values and restart the ESP over port 80. The commented
+  block contains `auth` with `type: digest` and credentials from `secrets.yaml`.
+
+### Documentation
+- README: new section "Web server (optional)" on the risks without login and how to protect it.
+
+
 ## [1.3.4] — 2026-09-30 — Build without warnings
 
 ### Changed

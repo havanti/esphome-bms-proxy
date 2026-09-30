@@ -17,6 +17,17 @@ Getestet mit:
 
 ---
 
+## [1.3.5] — 2026-09-30 — Webserver optional
+
+### Geändert
+- `example.yaml`: Der `web_server`-Block ist auskommentiert und als optional gekennzeichnet. Ohne
+  `auth` konnte jeder im selben WLAN über Port 80 die Werte sehen und den ESP neu starten. Der
+  auskommentierte Block enthält `auth` mit `type: digest` und Zugangsdaten aus `secrets.yaml`.
+
+### Dokumentation
+- README: neuer Abschnitt „Webserver (optional)“ zu den Risiken ohne Anmeldung und zur Absicherung.
+
+
 ## [1.3.4] — 2026-09-30 — Build ohne Warnungen
 
 ### Geändert
