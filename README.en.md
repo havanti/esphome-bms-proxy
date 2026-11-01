@@ -26,6 +26,7 @@ The BMS protocol was fully developed through reverse engineering of HCI snoop lo
 |---|---|
 | Ective LC 200L BT+LT | tested ✅ |
 | Wattstunde LIX 200 LT | tested ✅ |
+| Startcraft LIT200 | partly (issue #1): temperature missing, current not confirmed yet |
 | Other 4S 12 V BMS with service UUID `0xFFE0` | possibly compatible |
 
 **Technical specifications of tested units:**

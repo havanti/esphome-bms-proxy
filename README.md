@@ -26,6 +26,7 @@ Das BMS-Protokoll wurde vollständig per Reverse-Engineering aus HCI-Snoop-Logs 
 |---|---|
 | Ective LC 200L BT+LT | getestet ✅ |
 | Wattstunde LIX 200 LT | getestet ✅ |
+| Startcraft LIT200 | teilweise (Issue #1): Temperatur fehlt, Strom noch nicht bestätigt |
 | Andere 4S-12V-BMS mit Service-UUID `0xFFE0` | möglicherweise kompatibel |
 
 **Technische Daten der getesteten Akkus:**

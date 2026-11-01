@@ -1,6 +1,7 @@
 #include "bms.h"
 #ifdef USE_ESP32_FRAMEWORK_ESP_IDF
 
+#include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
 #include <algorithm>
 #include <cmath>
@@ -265,6 +266,15 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
     return;
   }
 
+  // ── Startcraft current packet — int32 LE current, signed, unit 1 mA ────
+  if (data[0] == PACKET_TYPE_STARTCRAFT && len == CURRENT_PACKET_LEN) {
+    uint8_t decoded[CURRENT_PACKET_DECODED_LEN];
+    if (!decode_ascii_hex_(data + 1, CURRENT_PACKET_HEX_LEN, decoded, sizeof(decoded))) return;
+    auto current_raw = static_cast<int32_t>(read_u32_le(decoded + CURRENT_PACKET_CURRENT_OFFSET));
+    handle_current_packet_("Startcraft", current_raw);
+    return;
+  }
+
   // ── Temperature packet: 12 ASCII hex, trailing 8 chars = '0' ────────────
   // Encoding: first 4 chars = uint16 LE, Kelvin×10  →  raw/10 - 273.15 = °C
   // Ective ~9°C:  "050B00000000" → LE=0x0B05=2821 → 8.95°C
@@ -368,9 +378,11 @@ void BMS::parse_notification_(const uint8_t *data, uint16_t len) {
     }
   }
 
-  // Reached only when no branch above matched: log the head byte and length
+  // Reached only when no branch above matched: log length, head byte and raw data
   // so unknown variants surface in debug logs rather than failing silently.
-  ESP_LOGD(tag_, "Unrecognized BMS packet: len=%u head=0x%02X", len, data[0]);
+  char raw_hex[RAW_LOG_MAX_LEN * 2 + 1];
+  format_hex_to(raw_hex, data, std::min<size_t>(len, RAW_LOG_MAX_LEN));
+  ESP_LOGD(tag_, "Unrecognized BMS packet: len=%u head=0x%02X raw=%s", len, data[0], raw_hex);
 }
 
 }  // namespace bms

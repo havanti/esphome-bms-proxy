@@ -17,6 +17,14 @@ Tested against:
 
 ---
 
+## [1.3.7] — 2026-11-01 — Startcraft: current
+
+### Changed
+- The current of Startcraft batteries is read, and with it power, charging and runtime (issue #1). Not
+  confirmed yet.
+- The debug log shows the raw data of unknown packets.
+
+
 ## [1.3.6] — 2026-09-30 — Code cleanup
 
 ### Changed

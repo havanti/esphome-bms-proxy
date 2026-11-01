@@ -39,6 +39,9 @@ namespace bms {
 //                     caveat as above)
 //     decoded[4..7] = int32 LE signed, unit 1 mA (negative = discharge)
 //
+//   len=17, data[0]=0x83  — Startcraft current packet (issue #1)
+//     Decoded like the Wattstunde packet; sign and zero point not confirmed yet.
+//
 //   len=12, all ASCII hex, data[4..11]='0'  — Temperature packet
 //     data[0..3] = 4 ASCII hex chars → 2 decoded bytes
 //     decoded[0..1] = uint16 LE, Kelvin×10  →  raw/10 - 273.15 = °C
@@ -49,12 +52,15 @@ namespace bms {
 
 static constexpr uint16_t NOTIFY_HANDLE = 0x0016;
 static constexpr uint16_t CCCD_HANDLE = NOTIFY_HANDLE + 1;  // 0x0017
-// Current-packet header bytes that distinguish the two supported BMS variants.
+// Current-packet header bytes that distinguish the supported BMS variants.
 static constexpr uint8_t PACKET_TYPE_ECTIVE = 0x5E;
 static constexpr uint8_t PACKET_TYPE_WATTSTUNDE = 0xE8;
+static constexpr uint8_t PACKET_TYPE_STARTCRAFT = 0x83;
 // Shorter notifications carry none of the known packet types.
 static constexpr uint16_t MIN_PACKET_LEN = 4;
-// Both variants ship a 17-byte ASCII-hex frame (1 header byte + 16 hex chars).
+// Bytes of an unrecognized notification shown in the debug log (default ATT MTU 23 - 3).
+static constexpr uint16_t RAW_LOG_MAX_LEN = 20;
+// All variants ship a 17-byte ASCII-hex frame (1 header byte + 16 hex chars).
 static constexpr uint16_t CURRENT_PACKET_LEN = 17;
 static constexpr uint16_t CURRENT_PACKET_HEX_LEN = CURRENT_PACKET_LEN - 1;
 static constexpr uint16_t CURRENT_PACKET_DECODED_LEN = CURRENT_PACKET_HEX_LEN / 2;

@@ -17,6 +17,14 @@ Getestet mit:
 
 ---
 
+## [1.3.7] — 2026-11-01 — Startcraft: Strom
+
+### Geändert
+- Der Strom von Startcraft-Akkus wird gelesen, damit auch Leistung, Laden und Restlaufzeit (Issue #1). Noch
+  nicht bestätigt.
+- Das Debug-Log zeigt bei unbekannten Paketen die Rohdaten.
+
+
 ## [1.3.6] — 2026-09-30 — Code aufgeräumt
 
 ### Geändert
